@@ -147,6 +147,7 @@ enum {
     M_SETOPT_PRESERVE_CMDLINE = 32, // Don't set if already marked as FROM_CMDLINE
     M_SETOPT_NO_PRE_PARSE = 128,    // Reject M_OPT_PREPARSE options
     M_SETOPT_NO_OVERWRITE = 256,    // Skip options marked with FROM_*
+    M_SETOPT_WATCH_LATER = 512,     // Ignore options in watch later blacklist
 };
 
 // Set the named option to the given string. This is for command line and config

@@ -967,6 +967,16 @@ static struct m_profile *find_check_profile(struct m_config *config, char *name)
     return p;
 }
 
+static bool blacklist_contains(char **blacklist, const char *name)
+{
+    while (blacklist && *blacklist) {
+        if (strcmp(*blacklist, name) == 0)
+            return true;
+        blacklist++;
+    }
+    return false;
+}
+
 int m_config_set_profile(struct m_config *config, char *name, int flags)
 {
     MP_VERBOSE(config, "Applying profile '%s'...\n", name);
@@ -979,14 +989,26 @@ int m_config_set_profile(struct m_config *config, char *name, int flags)
         config->profile_backup_flags = p->restore_mode == 2 ? BACKUP_NVAL : 0;
     }
 
+    char **blacklist = NULL;
+    if ((flags & M_SETOPT_WATCH_LATER) && config->global)
+        mp_read_option_raw(config->global, "watch-later-blacklist",
+                &m_option_type_string_list, &blacklist);
+
     config->profile_depth++;
     for (int i = 0; i < p->num_opts; i++) {
+        if (blacklist_contains(blacklist, p->opts[2 * i])) {
+            MP_VERBOSE(config, "Option %s in watch later blacklist is ignored.\n", p->opts[2 * i]);
+            continue;
+        }
+
         m_config_set_option_cli(config,
                                 bstr0(p->opts[2 * i]),
                                 bstr0(p->opts[2 * i + 1]),
                                 flags | M_SETOPT_FROM_CONFIG_FILE);
     }
     config->profile_depth--;
+
+    talloc_free(blacklist);
 
     if (config->profile_backup_tmp == &p->backups) {
         config->profile_backup_tmp = NULL;
