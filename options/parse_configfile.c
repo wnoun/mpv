@@ -24,6 +24,7 @@
 #include <assert.h>
 
 #include "osdep/io.h"
+#include "stream/stream.h"
 
 #include "parse_configfile.h"
 #include "common/common.h"
@@ -157,34 +158,6 @@ int m_config_parse(m_config_t *config, const char *location, bstr data,
     return 1;
 }
 
-static bstr read_file(struct mp_log *log, const char *filename)
-{
-    FILE *f = fopen(filename, "rb");
-    if (!f) {
-        mp_verbose(log, "Can't open config file: %s\n", mp_strerror(errno));
-        return (bstr){0};
-    }
-    char *data = talloc_array(NULL, char, 0);
-    size_t size = 0;
-    while (1) {
-        size_t left = talloc_get_size(data) - size;
-        if (!left) {
-            MP_TARRAY_GROW(NULL, data, size + 1);
-            continue;
-        }
-        size_t s = fread(data + size, 1, left, f);
-        if (!s) {
-            if (ferror(f))
-                mp_err(log, "Error reading config file.\n");
-            fclose(f);
-            MP_TARRAY_APPEND(NULL, data, size, 0);
-            return (bstr){data, size - 1};
-        }
-        size += s;
-    }
-    assert(0);
-}
-
 // Load options and profiles from from a config file.
 //  conffile: path to the config file
 //  initial_section: default section where to add normal options
@@ -197,7 +170,7 @@ int m_config_parse_config_file(m_config_t *config, const char *conffile,
 
     MP_VERBOSE(config, "Reading config file %s\n", conffile);
 
-    bstr data = read_file(config->log, conffile);
+    bstr data = stream_read_file(conffile, NULL, config->global, 10000000);
     if (!data.start)
         return 0;
 

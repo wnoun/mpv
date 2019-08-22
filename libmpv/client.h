@@ -563,9 +563,9 @@ mpv_handle *mpv_create_weak_client(mpv_handle *ctx, const char *name);
  * Load a config file. This loads and parses the file, and sets every entry in
  * the config file's default section as if mpv_set_option_string() is called.
  *
- * The filename should be an absolute path. If it isn't, the actual path used
- * is unspecified. (Note: an absolute path starts with '/' on UNIX.) If the
- * file wasn't found, MPV_ERROR_INVALID_PARAMETER is returned.
+ * If the filename is on local filesystem, it should be an absolute path, otherwise
+ * the actual path used is unspecified. (Note: an absolute path starts with '/' on UNIX.)
+ * If the file wasn't found, MPV_ERROR_INVALID_PARAMETER is returned.
  *
  * If a fatal error happens when parsing a config file, MPV_ERROR_OPTION_ERROR
  * is returned. Errors when setting options as well as other types or errors
@@ -574,7 +574,7 @@ mpv_handle *mpv_create_weak_client(mpv_handle *ctx, const char *name);
  * possible that some options were successfully set even if any of these errors
  * happen.
  *
- * @param filename absolute path to the config file on the local filesystem
+ * @param filename path to the config file, may be any protocol supported by mpv
  * @return error code
  */
 int mpv_load_config_file(mpv_handle *ctx, const char *filename);
