@@ -237,59 +237,25 @@ exit:
     return res;
 }
 
-static const char *const backup_properties[] = {
-    "osd-level",
-    //"loop",
-    "speed",
-    "options/edition",
-    "pause",
-    "volume",
-    "mute",
-    "audio-delay",
-    //"balance",
-    "fullscreen",
-    "ontop",
-    "border",
-    "gamma",
-    "brightness",
-    "contrast",
-    "saturation",
-    "hue",
-    "options/deinterlace",
-    "vf",
-    "af",
-    "panscan",
-    "options/aid",
-    "options/vid",
-    "options/sid",
-    "sub-delay",
-    "sub-speed",
-    "sub-pos",
-    "sub-visibility",
-    "sub-scale",
-    "sub-use-margins",
-    "sub-ass-force-margins",
-    "sub-ass-vsfilter-aspect-compat",
-    "sub-style-override",
-    "ab-loop-a",
-    "ab-loop-b",
-    "options/video-aspect-override",
-    0
-};
-
 // Used to retrieve default settings, which should not be stored in the
 // resume config. Uses backup_properties[] meaning/order of values.
 // This explicitly includes values set by config files and command line.
 void mp_get_resume_defaults(struct MPContext *mpctx)
 {
+    char **props = mpctx->opts->watch_later_properties;
+    char **temp = props;
+    while (temp && *temp)
+        temp++;
+    size_t size = temp - props;
     char **list =
-        talloc_zero_array(mpctx, char*, MP_ARRAY_SIZE(backup_properties));
-    for (int i = 0; backup_properties[i]; i++) {
-        const char *pname = backup_properties[i];
+        talloc_zero_array(mpctx, char*, size * 2 + 1);
+    for (int i = 0; i < size; i++) {
+        const char *pname = props[i];
+        list[2 * i] = ta_strdup(list, pname);
         char *val = NULL;
         int r = mp_property_do(pname, M_PROPERTY_GET_STRING, &val, mpctx);
         if (r == M_PROPERTY_OK)
-            list[i] = talloc_steal(list, val);
+            list[2 * i + 1] = talloc_steal(list, val);
     }
     mpctx->resume_defaults = list;
 }
@@ -368,15 +334,15 @@ void mp_write_watch_later_conf(struct MPContext *mpctx)
     } else {
         fprintf(file, "start=%f\n", pos);
     }
-    for (int i = 0; backup_properties[i]; i++) {
-        const char *pname = backup_properties[i];
+    for (int i = 0; mpctx->resume_defaults[i]; i += 2) {
+        const char *pname = mpctx->resume_defaults[i];
         char *val = NULL;
         int r = mp_property_do(pname, M_PROPERTY_GET_STRING, &val, mpctx);
         if (r == M_PROPERTY_OK) {
             if (strncmp(pname, "options/", 8) == 0)
                 pname += 8;
             // Only store it if it's different from the initial value.
-            char *prev = mpctx->resume_defaults[i];
+            char *prev = mpctx->resume_defaults[i + 1];
             if (!prev || strcmp(prev, val) != 0) {
                 if (needs_config_quoting(val)) {
                     // e.g. '%6%STRING'
